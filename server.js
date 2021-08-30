@@ -3,8 +3,6 @@ const ct = require('console.table');
 const express = require('express');
 const db = require('./config/connection');
 const app = express();
-const PORT = process.env.PORT || 3001;
-
 
 
 app.use(express.json());
@@ -53,61 +51,60 @@ function initPrompt() {
         break;
 
       case "Update an Employee Role?":
-        addEmployeeRole();
+        updateEmployeeRole();
         break;
 
     }
   })
 }
-function viewAllDepartments(){
-//  SELECT * FROM department;
+
+function viewAllDepartments() {
   db.query("SELECT * FROM department",
-  function (err, results) {
-    if (err) throw err
-    console.table(results)
-    initPrompt()
-})};
-
-function viewAllRoles(){
-// SELECT * FROM role;
-db.query("SELECT * FROM role",
-function (err, results) {
-  if (err) throw err
-  console.table(results)
-  initPrompt()
-})};
-function viewAllEmployees(){
-//SELECT * FROM employee;
-db.query("SELECT * FROM employee",
-function (err, results) {
-  if (err) throw err
-  console.table(results)
-  initPrompt()
-})};
-
-function addDepartment(){
-  inquirer.prompt([
-    {
-      name: "name",
-      type: "input",
-      message: "Name of new department"
-    }
-]).then(function(res) {
-    db.query( "INSERT INTO department SET ? ",
-        {
-          name: res.name
-        },
-        function(err) {
-            if (err) throw err
-            console.log(res.name, "added as a Department");
-            initPrompt();
-        }
-    )
-})
+    function (err, results) {
+      if (err) throw err
+      console.table(results)
+      initPrompt()
+    })
 };
-function addRole(){
-  inquirer.prompt([
-    {
+
+function viewAllRoles() {
+  db.query("SELECT role.title, role.id, department.name, role.salary FROM department INNER JOIN role ON role.department_id=department.id",
+    function (err, results) {
+      if (err) throw err
+      console.table(results)
+      initPrompt()
+    })
+};
+
+function viewAllEmployees() {
+  db.query("SELECT employee.id, employee.first_name, employee.last_name, role.title,department.name, role.salary, employee.manager_id FROM employee INNER JOIN role ON employee.role_id=role.id INNER JOIN department ON role.department_id=department.id",
+    function (err, results) {
+      if (err) throw err
+      console.table(results)
+      initPrompt()
+    })
+};
+
+function addDepartment() {
+  inquirer.prompt([{
+    name: "name",
+    type: "input",
+    message: "Name of new department"
+  }]).then(function (res) {
+    db.query("INSERT INTO department SET ? ", {
+        name: res.name
+      },
+      function (err) {
+        if (err) throw err
+        console.log(res.name, "added as a Department");
+        initPrompt();
+      }
+    )
+  })
+};
+
+function addRole() {
+  inquirer.prompt([{
       name: "name",
       type: "input",
       message: "Name of new role"
@@ -122,24 +119,23 @@ function addRole(){
       type: "input",
       message: "Department to assign new role"
     }
-]).then(function(res) {
-    db.query( "INSERT INTO role SET ? ",
-        {
-          title: res.name,
-          salary: res.salary,
-          department_id: res.department,
-        },
-        function(err) {
-            if (err) throw err
-            console.log(res.name, "added as a new Role");
-            initPrompt();
-        }
+  ]).then(function (res) {
+    db.query("INSERT INTO role SET ? ", {
+        title: res.name,
+        salary: res.salary,
+        department_id: res.department,
+      },
+      function (err) {
+        if (err) throw err
+        console.log(res.name, "added as a new Role");
+        initPrompt();
+      }
     )
-})
+  })
 };
-function addEmployee(){
-  inquirer.prompt([
-    {
+
+function addEmployee() {
+  inquirer.prompt([{
       name: "firstname",
       type: "input",
       message: "First name "
@@ -160,22 +156,85 @@ function addEmployee(){
       message: "Who is the Manager? ",
     }
   ]).then(function (res) {
-    db.query("INSERT INTO employee SET ?", 
-    {
-        first_name: res.firstname,
-        last_name: res.lastname,
-        role_id: res.role,
-        manager_id: res.manager
-        
-        
-    }, function(err){
-        if (err) throw err
-        console.table(res.firstname,"added as a new Employee")
-        initPrompt()
+    db.query("INSERT INTO employee SET ?", {
+      first_name: res.firstname,
+      last_name: res.lastname,
+      role_id: res.role,
+      manager_id: res.manager
+
+
+    }, function (err) {
+      if (err) throw err
+      console.table(res.firstname, "added as a new Employee")
+      initPrompt()
     })
 
-})
+  })
 };
-function addEmployeeRole(){};
+
+function updateEmployeeRole() {
+
+  db.query(`SELECT * FROM employee`, (err, data) => {
+    if (err) throw err;
+
+    const employees = data.map(({
+      id,
+      first_name,
+      last_name
+    }) => ({
+      name: first_name + " " + last_name,
+      value: id
+    }));
+
+    inquirer.prompt([{
+        type: 'list',
+        name: 'name',
+        message: "Select an Employee to Update their Role",
+        choices: employees
+      }])
+      .then(event => {
+        const employee = event.name;
+        //creating an array to put the results in order to query the updated results
+        const updateArray = [];
+        updateArray.push(employee);
+
+        db.query(`SELECT * FROM role`, (err, data) => {
+          if (err) throw err;
+
+          const roles = data.map(({
+            id,
+            title
+          }) => ({
+            name: title,
+            value: id
+          }));
+
+          inquirer.prompt([{
+              type: 'list',
+              name: 'role',
+              message: "Select a new Role?",
+              choices: roles
+            }])
+            .then(event=> {
+              const role = event.role;
+              updateArray.push(role);
+            
+              //need to swap array to get role_id value first
+              let employee = updateArray[0]
+              updateArray[0] = role
+              updateArray[1] = employee
+
+
+              db.query(`UPDATE employee SET role_id = ? WHERE id = ?`, updateArray, (err, result) => {
+                if (err) throw err;
+                console.log("Employee Updated, View all Employees to see update");
+
+                initPrompt();
+              });
+            });
+        });
+      });
+  });
+};
 
 initPrompt()

@@ -71,9 +71,18 @@ VALUE ("Jordan", "Belfort", 12 , 2);
 INSERT INTO employee (first_name, last_name, role_id, manager_id)
 VALUE ("Pope", "Francis", 14 , null);
 INSERT INTO employee (first_name, last_name, role_id, manager_id)
-VALUE ("Teresa", "of Calcutta", 6 , null);
+VALUE ("Teresa", "of Calcutta", 14 , null);
 
+-- Test area for mysql commands
+-- SELECT role.title, role.id, department.name, role.salary
+-- FROM department
+-- INNER JOIN role ON role.department_id=department.id;
 
+-- SELECT employee.id, employee.first_name, employee.last_name, role.title,department.name, role.salary, employee.manager_id
+-- FROM employee
+-- INNER JOIN role ON employee.role_id=role.id
+-- INNER JOIN department ON role.department_id=department.id;
 
-
-
+-- SELECT employee.id, CONCAT(employee.first_name," ", employee.last_name), role.title
+-- FROM employee
+-- INNER JOIN role ON employee.role_id=role.id
