@@ -1,20 +1,19 @@
 const inquirer = require("inquirer")
 const mysql = require("mysql2")
 const ct = require('console.table');
-const sequelize = require('./config/connection');
 const express = require('express');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// const db = mysql.createConnection({
-//     host: 'localhost',
-//     user: 'root',
-//     password: '',
-//     database: 'employee_tracker_db',
-//   },
-//   console.log(`Connected to the employee_tracker database.`)
-// );
+const db = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: 'grande123',
+    database: 'employee_tracker_db',
+  },
+  console.log(`Connected to the employee_tracker database.`)
+);
 
 app.use(express.json());
 app.use(express.urlencoded({
@@ -70,7 +69,7 @@ function initPrompt() {
 }
 function viewAllDepartments(){
 //  SELECT * FROM department;
-  sequelize.query("SELECT * FROM department",
+  db.query("SELECT * FROM department",
   function (err, results) {
     if (err) throw err
     console.table(results)
@@ -79,12 +78,21 @@ function viewAllDepartments(){
 
 function viewAllRoles(){
 // SELECT * FROM role;
-
-};
+db.query("SELECT * FROM role",
+function (err, results) {
+  if (err) throw err
+  console.table(results)
+  initPrompt()
+})};
 function viewAllEmployees(){
 //SELECT * FROM employee;
+db.query("SELECT * FROM employee",
+function (err, results) {
+  if (err) throw err
+  console.table(results)
+  initPrompt()
+})};
 
-};
 function addDepartment(){};
 function addRole(){};
 function addEmployee(){};
