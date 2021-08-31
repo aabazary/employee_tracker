@@ -134,41 +134,70 @@ function addRole() {
   })
 };
 
+
 function addEmployee() {
-  inquirer.prompt([{
-      name: "firstname",
-      type: "input",
-      message: "First name "
-    },
-    {
-      name: "lastname",
-      type: "input",
-      message: "Last name "
-    },
-    {
-      name: "role",
-      type: "input",
-      message: "What is their role? ",
-    },
-    {
-      name: "manager",
-      type: "input",
-      message: "Who is the Manager? ",
-    }
-  ]).then(function (res) {
-    db.query("INSERT INTO employee SET ?", {
-      first_name: res.firstname,
-      last_name: res.lastname,
-      role_id: res.role,
-      manager_id: res.manager
+  // db.query(`SELECT * FROM role`, (err, data) => {
+  //   if (err) throw err;
+
+  //   const roles = data.map(({
+  //     id,
+  //     title
+  //   }) => ({
+  //     name: title,
+  //     value: id
 
 
-    }, function (err) {
-      if (err) throw err
-      console.table(res.firstname, "added as a new Employee")
-      initPrompt()
+
+
+      db.query(`SELECT first_name, last_name FROM employee WHERE manager_id IS NULL`, (err, data) => {
+        if (err) throw err;    
+        const managers = data.map(({
+          first_name,
+          last_name
+        }) => ({
+          name: first_name + " " + last_name,
+
+    }));
+
+
+
+    inquirer.prompt([{
+        name: "firstname",
+        type: "input",
+        message: "First name "
+      },
+      {
+        name: "lastname",
+        type: "input",
+        message: "Last name "
+      },
+      {
+        name: "role",
+        type: "list",
+        message: "What is their role? ",
+        choices: ["1","2"]
+      },
+      {
+        name: "manager",
+        type: "list",
+        message: "Who is the Manager? ",
+        choices: managers
+      }
+    ]).then(function (res) {
+      db.query("INSERT INTO employee SET ?", {
+        first_name: res.firstname,
+        last_name: res.lastname,
+        role_id: res.role,
+        manager_id: res.manager
+
+
+      }, function (err) {
+        if (err) throw err
+        console.table(res.firstname, "added as a new Employee")
+        initPrompt()
+      })
+
     })
-
   })
 };
 
@@ -215,10 +244,10 @@ function updateEmployeeRole() {
               message: "Select a new Role?",
               choices: roles
             }])
-            .then(event=> {
+            .then(event => {
               const role = event.role;
               updateArray.push(role);
-            
+
               //need to swap array to get role_id value first
               let employee = updateArray[0]
               updateArray[0] = role
