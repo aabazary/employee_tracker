@@ -1,16 +1,9 @@
+//npm packages being imported
 const inquirer = require("inquirer")
 const ct = require('console.table');
-const express = require('express');
 const db = require('./config/connection');
-const app = express();
 
-
-app.use(express.json());
-app.use(express.urlencoded({
-  extended: true
-}));
-
-
+//function to initialize prompt that calls an inquirer prompt that allows the user to select from each available function
 function initPrompt() {
   inquirer.prompt([{
     type: "list",
@@ -57,7 +50,7 @@ function initPrompt() {
     }
   })
 }
-
+//function showing table for department
 function viewAllDepartments() {
   db.query("SELECT * FROM department",
     function (err, results) {
@@ -66,7 +59,7 @@ function viewAllDepartments() {
       initPrompt()
     })
 };
-
+//function showing table for roles
 function viewAllRoles() {
   db.query("SELECT role.title, role.id, department.name, role.salary FROM department INNER JOIN role ON role.department_id=department.id ORDER BY id ASC;",
     function (err, results) {
@@ -75,7 +68,7 @@ function viewAllRoles() {
       initPrompt()
     })
 };
-
+//function showing table for employees
 function viewAllEmployees() {
   db.query("SELECT employee.id, employee.first_name, employee.last_name, role.title,department.name, role.salary, employee.manager_id FROM employee INNER JOIN role ON employee.role_id=role.id INNER JOIN department ON role.department_id=department.id ORDER BY id ASC;",
     function (err, results) {
@@ -84,7 +77,7 @@ function viewAllEmployees() {
       initPrompt()
     })
 };
-
+//function adding department into database
 function addDepartment() {
   inquirer.prompt([{
     name: "name",
@@ -102,7 +95,7 @@ function addDepartment() {
     )
   })
 };
-
+//function adding role into database
 function addRole() {
   db.query(`SELECT * FROM department`, async (err, data) => {
     if (err) throw err;
@@ -115,6 +108,7 @@ function addRole() {
       value: id
 
     }));
+    //inquirer prompt that presents a list of departments to choose from after inputting role name and salary
   inquirer.prompt([{
       name: "name",
       type: "input",
@@ -147,21 +141,19 @@ function addRole() {
 })
 };
 
-
+//function adding employee into database
 function addEmployee() {
+  //async function mapping roles to call as a list in the prompt
   db.query(`SELECT * FROM role`, async (err, data) => {
     if (err) throw err;
-
     const roles = await data.map(({
       id,
       title
     }) => ({
       name: title,
       value: id
-
     }));
-
-
+//async function mapping managers to call as a list in the prompt
     db.query(`SELECT * FROM employee WHERE manager_id IS NULL`, async (err, data) => {
       if (err) throw err;
       const managers = await data.map(({
@@ -171,11 +163,8 @@ function addEmployee() {
       }) => ({
         name: first_name + " " + last_name,
         value: id
-
       }));
-
-
-
+//inquirer prompts within the addEmployee selection of the initPrompt
       inquirer.prompt([{
           name: "firstname",
           type: "input",
@@ -204,8 +193,6 @@ function addEmployee() {
           last_name: res.lastname,
           role_id: res.role,
           manager_id: res.manager
-
-
         }, function (err) {
           if (err) throw err
           console.table(res.firstname, "added as a new Employee")
@@ -217,6 +204,7 @@ function addEmployee() {
   })
 };
 
+//function to update employee in the database
 function updateEmployeeRole() {
 
   db.query(`SELECT * FROM employee`, (err, data) => {
@@ -230,7 +218,7 @@ function updateEmployeeRole() {
       name: first_name + " " + last_name,
       value: id
     }));
-
+    //inquirer prompt that presents a list of employees to choose from
     inquirer.prompt([{
         type: 'list',
         name: 'name',
@@ -253,7 +241,7 @@ function updateEmployeeRole() {
             name: title,
             value: id
           }));
-
+          //inquirer prompt that presents a list of roles to choose from 
           inquirer.prompt([{
               type: 'list',
               name: 'role',
