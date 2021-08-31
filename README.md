@@ -12,14 +12,7 @@ A Node based program that allows you to view and manage the departments, roles, 
 - [Questions](#questions)
 
 ## <ins>Installation</ins>
-Type ```npm i``` in the integrated terminal(if all the files do not install, attempt it again)
-
-![npm I](./images/npmI.png)
-
-## <ins>Usage</ins>
-Run the application in the integrated terminal by typing "node index.js". 
-
-![node](./images/nodeIndex.png)
+Type ```npm i``` or `npm install` in the integrated terminal(if all the files do not install, attempt it again)
 
 ## <ins>Usage</ins>
 Start the Program by opening your integrated terminal  Then running the command `node server.js` You will be presented with a series of prompts that gives you ways to access and alter your database. You are able to view tables for Departments, Roles and Employees. You may also add to each of them, as well as update the role of an employee. 
