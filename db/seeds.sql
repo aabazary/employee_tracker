@@ -31,7 +31,7 @@ VALUE ("Manufacturer", 100000, 2);
 INSERT INTO role (title, salary, department_id)
 VALUE ("Lead Developer", 200000, 3);
 INSERT INTO role (title, salary, department_id)
-VALUE ("Researcher", 100000, 3;
+VALUE ("Researcher", 100000, 3);
 INSERT INTO role (title, salary, department_id)
 VALUE ("Marketing Manager", 200000, 4);
 INSERT INTO role (title, salary, department_id)

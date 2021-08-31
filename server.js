@@ -68,7 +68,7 @@ function viewAllDepartments() {
 };
 
 function viewAllRoles() {
-  db.query("SELECT role.title, role.id, department.name, role.salary FROM department INNER JOIN role ON role.department_id=department.id",
+  db.query("SELECT role.title, role.id, department.name, role.salary FROM department INNER JOIN role ON role.department_id=department.id ORDER BY id ASC;",
     function (err, results) {
       if (err) throw err
       console.table(results)
@@ -77,7 +77,7 @@ function viewAllRoles() {
 };
 
 function viewAllEmployees() {
-  db.query("SELECT employee.id, employee.first_name, employee.last_name, role.title,department.name, role.salary, employee.manager_id FROM employee INNER JOIN role ON employee.role_id=role.id INNER JOIN department ON role.department_id=department.id",
+  db.query("SELECT employee.id, employee.first_name, employee.last_name, role.title,department.name, role.salary, employee.manager_id FROM employee INNER JOIN role ON employee.role_id=role.id INNER JOIN department ON role.department_id=department.id ORDER BY id ASC;",
     function (err, results) {
       if (err) throw err
       console.table(results)
@@ -104,20 +104,32 @@ function addDepartment() {
 };
 
 function addRole() {
+  db.query(`SELECT * FROM department`, async (err, data) => {
+    if (err) throw err;
+
+    const departments = await data.map(({
+      id,
+      name
+    }) => ({
+      name: name,
+      value: id
+
+    }));
   inquirer.prompt([{
       name: "name",
       type: "input",
-      message: "Name of new role"
+      message: "Name of new role:"
     },
     {
       name: "salary",
       type: "input",
-      message: "Salary of the role"
+      message: "Salary of the role:"
     },
     {
       name: "department",
-      type: "input",
-      message: "Department to assign new role"
+      type: "list",
+      message: "Department to assign new role:",
+      choices: departments
     }
   ]).then(function (res) {
     db.query("INSERT INTO role SET ? ", {
@@ -132,71 +144,75 @@ function addRole() {
       }
     )
   })
+})
 };
 
 
 function addEmployee() {
-  // db.query(`SELECT * FROM role`, (err, data) => {
-  //   if (err) throw err;
+  db.query(`SELECT * FROM role`, async (err, data) => {
+    if (err) throw err;
 
-  //   const roles = data.map(({
-  //     id,
-  //     title
-  //   }) => ({
-  //     name: title,
-  //     value: id
-
-
-
-
-      db.query(`SELECT first_name, last_name FROM employee WHERE manager_id IS NULL`, (err, data) => {
-        if (err) throw err;    
-        const managers = data.map(({
-          first_name,
-          last_name
-        }) => ({
-          name: first_name + " " + last_name,
+    const roles = await data.map(({
+      id,
+      title
+    }) => ({
+      name: title,
+      value: id
 
     }));
 
 
+    db.query(`SELECT * FROM employee WHERE manager_id IS NULL`, async (err, data) => {
+      if (err) throw err;
+      const managers = await data.map(({
+        first_name,
+        last_name,
+        id
+      }) => ({
+        name: first_name + " " + last_name,
+        value: id
 
-    inquirer.prompt([{
-        name: "firstname",
-        type: "input",
-        message: "First name "
-      },
-      {
-        name: "lastname",
-        type: "input",
-        message: "Last name "
-      },
-      {
-        name: "role",
-        type: "list",
-        message: "What is their role? ",
-        choices: ["1","2"]
-      },
-      {
-        name: "manager",
-        type: "list",
-        message: "Who is the Manager? ",
-        choices: managers
-      }
-    ]).then(function (res) {
-      db.query("INSERT INTO employee SET ?", {
-        first_name: res.firstname,
-        last_name: res.lastname,
-        role_id: res.role,
-        manager_id: res.manager
+      }));
 
 
-      }, function (err) {
-        if (err) throw err
-        console.table(res.firstname, "added as a new Employee")
-        initPrompt()
+
+      inquirer.prompt([{
+          name: "firstname",
+          type: "input",
+          message: "First name "
+        },
+        {
+          name: "lastname",
+          type: "input",
+          message: "Last name "
+        },
+        {
+          name: "role",
+          type: "list",
+          message: "What is their role? ",
+          choices: roles
+        },
+        {
+          name: "manager",
+          type: "list",
+          message: "Who is their Manager? ",
+          choices: managers
+        }
+      ]).then(function (res) {
+        db.query("INSERT INTO employee SET ?", {
+          first_name: res.firstname,
+          last_name: res.lastname,
+          role_id: res.role,
+          manager_id: res.manager
+
+
+        }, function (err) {
+          if (err) throw err
+          console.table(res.firstname, "added as a new Employee")
+          initPrompt()
+        })
+
       })
-
     })
   })
 };
