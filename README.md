@@ -25,6 +25,7 @@ Run the application in the integrated terminal by typing "node index.js".
 Start the Program by opening your integrated terminal  Then running the command `node server.js` You will be presented with a series of prompts that gives you ways to access and alter your database. You are able to view tables for Departments, Roles and Employees. You may also add to each of them, as well as update the role of an employee. 
 
 Sample of Deployed Application:
+
 ![demo](https://user-images.githubusercontent.com/85041715/131582642-67f0a557-aa44-4fb5-a418-8bd679e2a93d.gif)
 
 ## <ins>License</ins>
