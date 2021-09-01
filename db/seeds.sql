@@ -88,4 +88,6 @@ VALUE ("Teresa", "of Calcutta", 14 , null);
 -- FROM employee
 -- INNER JOIN role ON employee.role_id=role.id
 
--- SELECT CONCAT(first_name, " ", last_name) FROM employee WHERE manager_id IS NULL
+-- SELECT CONCAT(first_name, ' ', last_name) FROM employee WHERE manager_id IS NULL
+
+-- SELECT CONCAT(first_name, ' ', last_name) FROM employee WHERE department_id IS 3

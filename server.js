@@ -13,6 +13,8 @@ function initPrompt() {
       "View All Departments?",
       "View All Roles?",
       "View all Employees",
+      "View Employees by Manager",
+      // "View Employees by Department",
       "Add Department?",
       "Add Role?",
       "Add Employee?",
@@ -28,9 +30,18 @@ function initPrompt() {
       case "View All Roles?":
         viewAllRoles();
         break;
+
       case "View all Employees":
         viewAllEmployees();
         break;
+
+      case "View Employees by Manager":
+        viewEmployeesByManager();
+        break;
+
+      // case "View Employees by Department":
+      //   viewEmployeesByDepartment();
+      //   break;
 
       case "Add Department?":
         addDepartment();
@@ -80,6 +91,77 @@ function viewAllEmployees() {
       initPrompt()
     })
 };
+
+// Working on Employees by department
+// function viewEmployeesByDepartment() {
+//   db.query(`SELECT * FROM department`, (err, data) => {
+//     if (err) throw err;
+
+//     const department = data.map(({
+//       id,
+//       name
+
+//     }) => ({
+//       name: name,
+//       value: id
+//     }));
+//     inquirer.prompt([{
+//       name: "department",
+//       type: "list",
+//       message: "Select A Department:",
+//       choices: department
+//     }]).then(event => {
+//       const department = event.department;
+//       console.log(department);
+      
+
+//       db.query(`SELECT CONCAT(first_name, ' ', last_name) AS Employees FROM employee WHERE department= ${department};`, function (err, results) {
+//         if (err) throw err
+//           console.table(results)
+
+//         initPrompt()
+//       })
+//     })
+//   })
+// };
+
+
+//function showing table for employees based on the selected Manager
+function viewEmployeesByManager() {
+  db.query(`SELECT * FROM employee WHERE manager_id IS NULL`, (err, data) => {
+    if (err) throw err;
+
+    const managers = data.map(({
+      id,
+      first_name,
+      last_name
+
+    }) => ({
+      name: first_name + ' ' + last_name,
+      value: id
+    }));
+    inquirer.prompt([{
+      name: "managers",
+      type: "list",
+      message: "Select A Manager:",
+      choices: managers
+    }]).then(event => {
+      const managers = event.managers;
+
+      db.query(`SELECT CONCAT(first_name, ' ', last_name) AS Employees FROM employee WHERE manager_id= ${managers};`, function (err, results) {
+        if (err) throw err
+   
+        if (results === []) {
+          console.log("They have no Employees")
+        } else {
+          console.table(results)
+        }
+        initPrompt()
+      })
+    })
+  })
+};
+
 //function adding department into database
 function addDepartment() {
   inquirer.prompt([{
