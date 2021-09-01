@@ -17,6 +17,7 @@ function initPrompt() {
       "Add Role?",
       "Add Employee?",
       "Update an Employee Role?",
+      "Exit Application"
     ]
   }]).then(function (event) {
     switch (event.choice) {
@@ -47,12 +48,14 @@ function initPrompt() {
         updateEmployeeRole();
         break;
 
+      case "Exit Application":
+        process.exit();
     }
   })
 }
 //function showing table for department
 function viewAllDepartments() {
-  db.query("SELECT * FROM department",
+  db.query("SELECT id AS 'ID', name AS 'Department' FROM department",
     function (err, results) {
       if (err) throw err
       console.table(results)
@@ -61,16 +64,16 @@ function viewAllDepartments() {
 };
 //function showing table for roles
 function viewAllRoles() {
-  db.query("SELECT role.title, role.id, department.name, role.salary FROM department INNER JOIN role ON role.department_id=department.id ORDER BY id ASC;",
+  db.query("SELECT role.title AS 'Title', role.id AS 'ID', department.name AS 'Department', role.salary AS 'Salary' FROM department INNER JOIN role ON role.department_id=department.id ORDER BY id ASC;",
     function (err, results) {
       if (err) throw err
       console.table(results)
       initPrompt()
     })
 };
-//function showing table for employees
+//function showing table for employees. OUTER JOIN assisted by Lee
 function viewAllEmployees() {
-  db.query("SELECT employee.id, employee.first_name, employee.last_name, role.title,department.name, role.salary, employee.manager_id FROM employee INNER JOIN role ON employee.role_id=role.id INNER JOIN department ON role.department_id=department.id ORDER BY id ASC;",
+  db.query("SELECT employee.id AS ID, employee.first_name AS 'First Name', employee.last_name AS 'Last Name', role.title AS 'Title',department.name AS 'Department', role.salary AS 'Salary', CONCAT(manager.first_name, ' ' ,manager.last_name) AS Manager FROM employee INNER JOIN role ON employee.role_id=role.id INNER JOIN department ON role.department_id=department.id LEFT OUTER JOIN employee manager ON employee.manager_id =manager.id;",
     function (err, results) {
       if (err) throw err
       console.table(results)
@@ -109,36 +112,36 @@ function addRole() {
 
     }));
     //inquirer prompt that presents a list of departments to choose from after inputting role name and salary
-  inquirer.prompt([{
-      name: "name",
-      type: "input",
-      message: "Name of new role:"
-    },
-    {
-      name: "salary",
-      type: "input",
-      message: "Salary of the role:"
-    },
-    {
-      name: "department",
-      type: "list",
-      message: "Department to assign new role:",
-      choices: departments
-    }
-  ]).then(function (res) {
-    db.query("INSERT INTO role SET ? ", {
-        title: res.name,
-        salary: res.salary,
-        department_id: res.department,
+    inquirer.prompt([{
+        name: "name",
+        type: "input",
+        message: "Name of new role:"
       },
-      function (err) {
-        if (err) throw err
-        console.log(res.name, "added as a new Role");
-        initPrompt();
+      {
+        name: "salary",
+        type: "input",
+        message: "Salary of the role:"
+      },
+      {
+        name: "department",
+        type: "list",
+        message: "Department to assign new role:",
+        choices: departments
       }
-    )
+    ]).then(function (res) {
+      db.query("INSERT INTO role SET ? ", {
+          title: res.name,
+          salary: res.salary,
+          department_id: res.department,
+        },
+        function (err) {
+          if (err) throw err
+          console.log(res.name, "added as a new Role");
+          initPrompt();
+        }
+      )
+    })
   })
-})
 };
 
 //function adding employee into database
@@ -153,7 +156,7 @@ function addEmployee() {
       name: title,
       value: id
     }));
-//async function mapping managers to call as a list in the prompt
+    //async function mapping managers to call as a list in the prompt
     db.query(`SELECT * FROM employee WHERE manager_id IS NULL`, async (err, data) => {
       if (err) throw err;
       const managers = await data.map(({
@@ -164,7 +167,7 @@ function addEmployee() {
         name: first_name + " " + last_name,
         value: id
       }));
-//inquirer prompts within the addEmployee selection of the initPrompt
+      //inquirer prompts within the addEmployee selection of the initPrompt
       inquirer.prompt([{
           name: "firstname",
           type: "input",
