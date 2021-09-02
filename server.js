@@ -20,6 +20,7 @@ function initPrompt() {
       "Add Role?",
       "Add Employee?",
       "Update an Employee Role?",
+      "Delete Function",
       "Exit Application"
     ]
   }]).then(function (event) {
@@ -35,8 +36,8 @@ function initPrompt() {
       case "View all Employees":
         viewAllEmployees();
         break;
-     
-        case "View Department Budget":
+
+      case "View Department Budget":
         viewDepartmentBudget();
         break;
 
@@ -62,6 +63,10 @@ function initPrompt() {
 
       case "Update an Employee Role?":
         updateEmployeeRole();
+        break;
+
+      case "Delete Function":
+        deleteFunction();
         break;
 
       case "Exit Application":
@@ -165,13 +170,13 @@ function viewEmployeesByManager() {
 };
 
 //function viewing department budget
-function viewDepartmentBudget(){
+function viewDepartmentBudget() {
   db.query('SELECT department_id AS ID, department.name AS Department,SUM(salary) AS Budget FROM  role INNER JOIN department ON role.department_id = department.id GROUP BY  role.department_id',
-  function (err, results) {
-    if (err) throw err
-    console.table(results)
-    initPrompt()
-  })
+    function (err, results) {
+      if (err) throw err
+      console.table(results)
+      initPrompt()
+    })
 };
 //function adding department into database
 function addDepartment() {
@@ -361,6 +366,124 @@ function updateEmployeeRole() {
                 initPrompt();
               });
             });
+        });
+      });
+  });
+};
+
+function deleteFunction() {
+  inquirer.prompt([{
+    type: "list",
+    message: "Make a Selection:",
+    name: "choice",
+    choices: [
+      "Delete Employee",
+      "Delete Role",
+      "Delete Department"
+    ]
+  }]).then(function (event) {
+    switch (event.choice) {
+      case "Delete Department":
+        deleteDepartment();
+        break;
+      case "Delete Role":
+        deleteRole();
+        break;
+      case "Delete Employee":
+        deleteEmployee();
+        break;
+
+    }
+  })
+};
+
+
+//function to delete an employee
+function deleteEmployee() {
+  db.query(`SELECT * FROM employee`, (err, data) => {
+    if (err) throw err;
+
+    const employees = data.map(({
+      id,
+      first_name,
+      last_name
+    }) => ({
+      name: first_name + " " + last_name,
+      value: id
+    }));
+    //inquirer prompt that presents a list of employees to choose from
+    inquirer.prompt([{
+        type: 'list',
+        name: 'name',
+        message: "Select an Employee to remove from the database",
+        choices: employees
+      }])
+      .then(event => {
+        db.query(`DELETE FROM employee WHERE employee.id = ${event.name} `, (err, result) => {
+          if (err) throw err;
+          console.log("Employee has been removed from the database.");
+
+          initPrompt();
+        });
+      });
+  });
+};
+
+//function to delete a role
+function deleteRole() {
+  db.query(`SELECT * FROM role`, (err, data) => {
+    if (err) throw err;
+
+    const roles = data.map(({
+      id,
+      title
+    }) => ({
+      name: title,
+      value: id
+    }));
+    //inquirer prompt that presents a list of roles to choose from
+    inquirer.prompt([{
+        type: 'list',
+        name: 'name',
+        message: "Select a Role to remove",
+        choices: roles
+      }])
+      .then(event => {
+        db.query(`DELETE FROM role WHERE role.id = ${event.name} `, (err, result) => {
+          if (err) throw err;
+          console.log("Role has been removed from the database.");
+
+          initPrompt();
+        });
+      });
+  });
+};
+
+//function to delete a department
+function deleteDepartment() {
+  db.query(`SELECT * FROM department`, (err, data) => {
+    if (err) throw err;
+
+    const departments = data.map(({
+      id,
+      name
+    }) => ({
+      name: name,
+      value: id
+    }));
+    //inquirer prompt that presents a list of department to choose from
+    inquirer.prompt([{
+        type: 'list',
+        name: 'name',
+        message: "Select a Department to remove",
+        choices: departments
+      }])
+      .then(event => {
+        db.query(`DELETE FROM department WHERE department.id = ${event.name} `, (err, result) => {
+          if (err) throw err;
+          console.log("Department has been removed from the database.");
+
+          initPrompt();
         });
       });
   });
