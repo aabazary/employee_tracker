@@ -19,7 +19,8 @@ function initPrompt() {
       "Add Department?",
       "Add Role?",
       "Add Employee?",
-      "Update an Employee Role?",
+      "Update an Employee's Role?",
+      "Update an Employee's Manager?",
       "Delete Function",
       "Exit Application"
     ]
@@ -63,6 +64,10 @@ function initPrompt() {
 
       case "Update an Employee Role?":
         updateEmployeeRole();
+        break;
+
+      case "Update an Employee's Manager?":
+        updateEmployeeManager();
         break;
 
       case "Delete Function":
@@ -370,7 +375,48 @@ function updateEmployeeRole() {
       });
   });
 };
+//function to change the employee manager. if they select themselves they no longer have a manager(self)
+function updateEmployeeManager(){
+  db.query(`SELECT * FROM employee`, (err, data) => {
+    if (err) throw err;
 
+    const employees = data.map(({
+      id,
+      first_name,
+      last_name
+    }) => ({
+      name: first_name + " " + last_name,
+      value: id
+    }));
+    //inquirer prompt that presents a list of employees to choose from
+    inquirer.prompt([
+      {
+        type: 'list',
+        name: 'employee',
+        message: "Select an Employee to change their Manager",
+        choices: employees
+      },
+      {
+        type: 'list',
+        name: 'manager',
+        message: "Select a new Manager",
+        choices: employees
+      }]).then(event =>{
+       if(event.manager===event.employee){
+        db.query(`UPDATE employee SET manager_id = NULL WHERE id = ${event.employee}`, (err, result) => {
+          if (err) throw err;
+          console.log("New Manager Updated");
+          initPrompt();
+        })} else {
+          db.query(`UPDATE employee SET manager_id = ${event.manager} WHERE id = ${event.employee}`, (err, result) => {
+            if (err) throw err;
+            console.log("New Manager Updated");
+            initPrompt();
+        })};
+      })
+})};
+
+//function giving prompts that calls desired delete function
 function deleteFunction() {
   inquirer.prompt([{
     type: "list",
@@ -489,4 +535,4 @@ function deleteDepartment() {
   });
 };
 
-initPrompt()
+initPrompt();
