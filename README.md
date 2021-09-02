@@ -20,11 +20,11 @@ Run the schema with `source db/schema.sql` and run the seeds with `source db/see
 `Exit` your sequal and you
 
 ## <ins>Usage</ins>
-Start the Program by opening your integrated terminal, Then running the command `node server.js` You will be presented with a series of prompts that gives you ways to access and alter your database. You are able to view tables for Departments, Roles and Employees. You may also add to each of them, as well as update the role of an employee. 
+Start the Program by opening your integrated terminal, Then running the command `node server.js` You will be presented with a series of prompts that gives you ways to access and alter your database. You are able to view tables for Departments, Roles, Employees, Employees by Manager Name, Employee by Department and Department Budget. You may add and delete an Employee, Role and Department. You may update the role of an employee as well as change their manager.
 
 Sample of Deployed Application:
 
-![demo](https://user-images.githubusercontent.com/85041715/131582642-67f0a557-aa44-4fb5-a418-8bd679e2a93d.gif)
+![demo](https://user-images.githubusercontent.com/85041715/131813568-d54ce56e-bbbd-47b3-b51d-6469109ac5eb.gif)
 
 ## <ins>License</ins>
 ![](https://img.shields.io/badge/License-MIT%20-blue?style=flat-square)
