@@ -14,7 +14,7 @@ function initPrompt() {
       "View All Roles?",
       "View all Employees",
       "View Employees by Manager",
-      // "View Employees by Department",
+      "View Employees by Department",
       "Add Department?",
       "Add Role?",
       "Add Employee?",
@@ -39,9 +39,9 @@ function initPrompt() {
         viewEmployeesByManager();
         break;
 
-      // case "View Employees by Department":
-      //   viewEmployeesByDepartment();
-      //   break;
+      case "View Employees by Department":
+        viewEmployeesByDepartment();
+        break;
 
       case "Add Department?":
         addDepartment();
@@ -93,37 +93,34 @@ function viewAllEmployees() {
 };
 
 // Working on Employees by department
-// function viewEmployeesByDepartment() {
-//   db.query(`SELECT * FROM department`, (err, data) => {
-//     if (err) throw err;
+function viewEmployeesByDepartment() {
+  db.query(`SELECT * FROM department`, (err, data) => {
+    if (err) throw err;
 
-//     const department = data.map(({
-//       id,
-//       name
+    const department = data.map(({
+      id,
+      name
 
-//     }) => ({
-//       name: name,
-//       value: id
-//     }));
-//     inquirer.prompt([{
-//       name: "department",
-//       type: "list",
-//       message: "Select A Department:",
-//       choices: department
-//     }]).then(event => {
-//       const department = event.department;
-//       console.log(department);
-      
+    }) => ({
+      name: name,
+      value: id
+    }));
+    inquirer.prompt([{
+      name: "department",
+      type: "list",
+      message: "Select A Department:",
+      choices: department
+    }]).then(event => {
+      const department = event.department;
+      db.query(`SELECT CONCAT(first_name, ' ', last_name) AS Employees, department.name AS Department FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id WHERE department_id= ${department};`, function (err, results) {
+        if (err) throw err
+          console.table(results)
 
-//       db.query(`SELECT CONCAT(first_name, ' ', last_name) AS Employees FROM employee WHERE department= ${department};`, function (err, results) {
-//         if (err) throw err
-//           console.table(results)
-
-//         initPrompt()
-//       })
-//     })
-//   })
-// };
+        initPrompt()
+      })
+    })
+  })
+};
 
 
 //function showing table for employees based on the selected Manager
