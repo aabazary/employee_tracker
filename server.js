@@ -15,6 +15,7 @@ function initPrompt() {
       "View all Employees",
       "View Employees by Manager",
       "View Employees by Department",
+      "View Department Budget",
       "Add Department?",
       "Add Role?",
       "Add Employee?",
@@ -33,6 +34,10 @@ function initPrompt() {
 
       case "View all Employees":
         viewAllEmployees();
+        break;
+     
+        case "View Department Budget":
+        viewDepartmentBudget();
         break;
 
       case "View Employees by Manager":
@@ -92,7 +97,7 @@ function viewAllEmployees() {
     })
 };
 
-// Working on Employees by department
+// function showing table of employees based on department selection
 function viewEmployeesByDepartment() {
   db.query(`SELECT * FROM department`, (err, data) => {
     if (err) throw err;
@@ -114,7 +119,7 @@ function viewEmployeesByDepartment() {
       const department = event.department;
       db.query(`SELECT CONCAT(first_name, ' ', last_name) AS Employees, department.name AS Department FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id WHERE department_id= ${department};`, function (err, results) {
         if (err) throw err
-          console.table(results)
+        console.table(results)
 
         initPrompt()
       })
@@ -147,7 +152,7 @@ function viewEmployeesByManager() {
 
       db.query(`SELECT CONCAT(first_name, ' ', last_name) AS Employees FROM employee WHERE manager_id= ${managers};`, function (err, results) {
         if (err) throw err
-   
+
         if (results === []) {
           console.log("They have no Employees")
         } else {
@@ -159,6 +164,15 @@ function viewEmployeesByManager() {
   })
 };
 
+//function viewing department budget
+function viewDepartmentBudget(){
+  db.query('SELECT department_id AS ID, department.name AS Department,SUM(salary) AS Budget FROM  role INNER JOIN department ON role.department_id = department.id GROUP BY  role.department_id',
+  function (err, results) {
+    if (err) throw err
+    console.table(results)
+    initPrompt()
+  })
+};
 //function adding department into database
 function addDepartment() {
   inquirer.prompt([{
