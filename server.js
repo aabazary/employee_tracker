@@ -1,538 +1,557 @@
-//npm packages being imported
-const inquirer = require("inquirer")
-const ct = require('console.table');
-const db = require('./config/connection');
+// npm packages being imported
+const inquirer = require("inquirer");
+const db = require("./config/connection");
+const chalk = require("chalk");
+const figlet = require("figlet");
+const ora = require("ora");
+const util = require("util");
 
-//function to initialize prompt that calls an inquirer prompt that allows the user to select from each available function
-function initPrompt() {
-  inquirer.prompt([{
-    type: "list",
-    message: "Make a Selection:",
-    name: "choice",
-    choices: [
-      "View All Departments?",
-      "View All Roles?",
-      "View all Employees",
-      "View Employees by Manager",
-      "View Employees by Department",
-      "View Department Budget",
-      "Add Department?",
-      "Add Role?",
-      "Add Employee?",
-      "Update an Employee's Role?",
-      "Update an Employee's Manager?",
-      "Delete Function",
-      "Exit Application"
-    ]
-  }]).then(function (event) {
-    switch (event.choice) {
-      case "View All Departments?":
-        viewAllDepartments();
+// Promisify db.query to use async/await
+db.query = util.promisify(db.query);
+
+// Display CLI banner
+console.log(chalk.blue(figlet.textSync("Employee Manager")));
+console.log(chalk.green("Welcome to the Employee Management CLI!\n"));
+
+// Main menu choices
+const menuChoices = [
+  "View All Departments",
+  "View All Roles",
+  "View All Employees",
+  "View Employees by Manager",
+  "View Employees by Department",
+  "View Department Budget",
+  "Add Department",
+  "Add Role",
+  "Add Employee",
+  "Update an Employee's Role",
+  "Update an Employee's Manager",
+  "Delete Function",
+  "Exit Application"
+];
+
+// =========================
+//       MAIN PROMPT
+// =========================
+async function initPrompt() {
+  try {
+    const { choice } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "choice",
+        message: chalk.yellow("Make a Selection:"),
+        choices: menuChoices
+      }
+    ]);
+
+    // Route to the appropriate function based on user choice
+    switch (choice) {
+      case "View All Departments":
+        await viewAllDepartments();
         break;
-
-      case "View All Roles?":
-        viewAllRoles();
+      case "View All Roles":
+        await viewAllRoles();
         break;
-
-      case "View all Employees":
-        viewAllEmployees();
+      case "View All Employees":
+        await viewAllEmployees();
         break;
-
-      case "View Department Budget":
-        viewDepartmentBudget();
-        break;
-
       case "View Employees by Manager":
-        viewEmployeesByManager();
+        await viewEmployeesByManager();
         break;
-
       case "View Employees by Department":
-        viewEmployeesByDepartment();
+        await viewEmployeesByDepartment();
         break;
-
-      case "Add Department?":
-        addDepartment();
+      case "View Department Budget":
+        await viewDepartmentBudget();
         break;
-
-      case "Add Role?":
-        addRole();
+      case "Add Department":
+        await addDepartment();
         break;
-
-      case "Add Employee?":
-        addEmployee();
+      case "Add Role":
+        await addRole();
         break;
-
-      case "Update an Employee Role?":
-        updateEmployeeRole();
+      case "Add Employee":
+        await addEmployee();
         break;
-
-      case "Update an Employee's Manager?":
-        updateEmployeeManager();
+      case "Update an Employee's Role":
+        await updateEmployeeRole();
         break;
-
+      case "Update an Employee's Manager":
+        await updateEmployeeManager();
+        break;
       case "Delete Function":
-        deleteFunction();
+        await deleteFunction();
         break;
-
       case "Exit Application":
+        console.log(chalk.red("Goodbye!"));
         process.exit();
     }
-  })
+  } catch (error) {
+    console.error(chalk.red("Error in main prompt:"), error);
+  }
 }
-//function showing table for department
-function viewAllDepartments() {
-  db.query("SELECT id AS 'ID', name AS 'Department' FROM department",
-    function (err, results) {
-      if (err) throw err
-      console.table(results)
-      initPrompt()
-    })
-};
-//function showing table for roles
-function viewAllRoles() {
-  db.query("SELECT role.title AS 'Title', role.id AS 'ID', department.name AS 'Department', role.salary AS 'Salary' FROM department INNER JOIN role ON role.department_id=department.id ORDER BY id ASC;",
-    function (err, results) {
-      if (err) throw err
-      console.table(results)
-      initPrompt()
-    })
-};
-//function showing table for employees. OUTER JOIN assisted by Lee
-function viewAllEmployees() {
-  db.query("SELECT employee.id AS ID, employee.first_name AS 'First Name', employee.last_name AS 'Last Name', role.title AS 'Title',department.name AS 'Department', role.salary AS 'Salary', CONCAT(manager.first_name, ' ' ,manager.last_name) AS Manager FROM employee INNER JOIN role ON employee.role_id=role.id INNER JOIN department ON role.department_id=department.id LEFT OUTER JOIN employee manager ON employee.manager_id =manager.id;",
-    function (err, results) {
-      if (err) throw err
-      console.table(results)
-      initPrompt()
-    })
-};
 
-// function showing table of employees based on department selection
-function viewEmployeesByDepartment() {
-  db.query(`SELECT * FROM department`, (err, data) => {
-    if (err) throw err;
+// =========================
+//      VIEW FUNCTIONS
+// =========================
 
-    const department = data.map(({
-      id,
-      name
+// View all departments
+async function viewAllDepartments() {
+  try {
+    const spinner = ora("Fetching departments...").start();
+    const results = await db.query("SELECT id AS 'ID', name AS 'Department' FROM department");
+    spinner.succeed("Departments loaded:");
+    console.table(results);
+  } catch (err) {
+    console.error(chalk.red("Error fetching departments:"), err);
+  } finally {
+    initPrompt();
+  }
+}
 
-    }) => ({
-      name: name,
-      value: id
-    }));
-    inquirer.prompt([{
-      name: "department",
-      type: "list",
-      message: "Select A Department:",
-      choices: department
-    }]).then(event => {
-      const department = event.department;
-      db.query(`SELECT CONCAT(first_name, ' ', last_name) AS Employees, department.name AS Department FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id WHERE department_id= ${department};`, function (err, results) {
-        if (err) throw err
-        console.table(results)
+// View all roles
+async function viewAllRoles() {
+  try {
+    const spinner = ora("Fetching roles...").start();
+    const results = await db.query(`
+      SELECT role.title AS 'Title', role.id AS 'ID', department.name AS 'Department', role.salary AS 'Salary'
+      FROM department
+      INNER JOIN role ON role.department_id = department.id
+      ORDER BY role.id ASC;
+    `);
+    spinner.succeed("Roles loaded:");
+    console.table(results);
+  } catch (err) {
+    console.error(chalk.red("Error fetching roles:"), err);
+  } finally {
+    initPrompt();
+  }
+}
 
-        initPrompt()
-      })
-    })
-  })
-};
+// View all employees (with LEFT JOIN to include manager info)
+async function viewAllEmployees() {
+  try {
+    const spinner = ora("Fetching employees...").start();
+    const results = await db.query(`
+      SELECT employee.id AS ID,
+             employee.first_name AS 'First Name',
+             employee.last_name AS 'Last Name',
+             role.title AS 'Title',
+             department.name AS 'Department',
+             role.salary AS 'Salary',
+             CONCAT(manager.first_name, ' ', manager.last_name) AS Manager
+      FROM employee
+      INNER JOIN role ON employee.role_id = role.id
+      INNER JOIN department ON role.department_id = department.id
+      LEFT JOIN employee manager ON employee.manager_id = manager.id;
+    `);
+    spinner.succeed("Employees loaded:");
+    console.table(results);
+  } catch (err) {
+    console.error(chalk.red("Error fetching employees:"), err);
+  } finally {
+    initPrompt();
+  }
+}
 
-
-//function showing table for employees based on the selected Manager
-function viewEmployeesByManager() {
-  db.query(`SELECT * FROM employee WHERE manager_id IS NULL`, (err, data) => {
-    if (err) throw err;
-
-    const managers = data.map(({
-      id,
-      first_name,
-      last_name
-
-    }) => ({
-      name: first_name + ' ' + last_name,
-      value: id
-    }));
-    inquirer.prompt([{
-      name: "managers",
-      type: "list",
-      message: "Select A Manager:",
-      choices: managers
-    }]).then(event => {
-      const managers = event.managers;
-
-      db.query(`SELECT CONCAT(first_name, ' ', last_name) AS Employees FROM employee WHERE manager_id= ${managers};`, function (err, results) {
-        if (err) throw err
-
-        if (results === []) {
-          console.log("They have no Employees")
-        } else {
-          console.table(results)
-        }
-        initPrompt()
-      })
-    })
-  })
-};
-
-//function viewing department budget
-function viewDepartmentBudget() {
-  db.query('SELECT department_id AS ID, department.name AS Department,SUM(salary) AS Budget FROM  role INNER JOIN department ON role.department_id = department.id GROUP BY  role.department_id',
-    function (err, results) {
-      if (err) throw err
-      console.table(results)
-      initPrompt()
-    })
-};
-//function adding department into database
-function addDepartment() {
-  inquirer.prompt([{
-    name: "name",
-    type: "input",
-    message: "Name of new department"
-  }]).then(function (res) {
-    db.query("INSERT INTO department SET ? ", {
-        name: res.name
-      },
-      function (err) {
-        if (err) throw err
-        console.log(res.name, "added as a Department");
-        initPrompt();
-      }
-    )
-  })
-};
-//function adding role into database
-function addRole() {
-  db.query(`SELECT * FROM department`, async (err, data) => {
-    if (err) throw err;
-
-    const departments = await data.map(({
-      id,
-      name
-    }) => ({
-      name: name,
-      value: id
-
-    }));
-    //inquirer prompt that presents a list of departments to choose from after inputting role name and salary
-    inquirer.prompt([{
-        name: "name",
-        type: "input",
-        message: "Name of new role:"
-      },
+// View employees by department
+async function viewEmployeesByDepartment() {
+  try {
+    const departmentsData = await db.query("SELECT * FROM department");
+    const departments = departmentsData.map(({ id, name }) => ({ name, value: id }));
+    const { department } = await inquirer.prompt([
       {
-        name: "salary",
-        type: "input",
-        message: "Salary of the role:"
-      },
-      {
-        name: "department",
         type: "list",
-        message: "Department to assign new role:",
+        name: "department",
+        message: chalk.yellow("Select A Department:"),
         choices: departments
       }
-    ]).then(function (res) {
-      db.query("INSERT INTO role SET ? ", {
-          title: res.name,
-          salary: res.salary,
-          department_id: res.department,
-        },
-        function (err) {
-          if (err) throw err
-          console.log(res.name, "added as a new Role");
-          initPrompt();
-        }
-      )
-    })
-  })
-};
+    ]);
 
-//function adding employee into database
-function addEmployee() {
-  //async function mapping roles to call as a list in the prompt
-  db.query(`SELECT * FROM role`, async (err, data) => {
-    if (err) throw err;
-    const roles = await data.map(({
-      id,
-      title
-    }) => ({
-      name: title,
+    const spinner = ora("Fetching employees for selected department...").start();
+    const results = await db.query(
+      `SELECT CONCAT(first_name, ' ', last_name) AS Employees,
+              department.name AS Department
+       FROM employee
+       JOIN role ON employee.role_id = role.id
+       JOIN department ON role.department_id = department.id
+       WHERE department_id = ?;`,
+      [department]
+    );
+    spinner.succeed("Employees loaded:");
+    console.table(results);
+  } catch (err) {
+    console.error(chalk.red("Error fetching employees by department:"), err);
+  } finally {
+    initPrompt();
+  }
+}
+
+// View employees by manager
+async function viewEmployeesByManager() {
+  try {
+    const managersData = await db.query("SELECT * FROM employee WHERE manager_id IS NULL");
+    const managers = managersData.map(({ id, first_name, last_name }) => ({
+      name: `${first_name} ${last_name}`,
       value: id
     }));
-    //async function mapping managers to call as a list in the prompt
-    db.query(`SELECT * FROM employee WHERE manager_id IS NULL`, async (err, data) => {
-      if (err) throw err;
-      const managers = await data.map(({
-        first_name,
-        last_name,
-        id
-      }) => ({
-        name: first_name + " " + last_name,
-        value: id
-      }));
-      //inquirer prompts within the addEmployee selection of the initPrompt
-      inquirer.prompt([{
-          name: "firstname",
-          type: "input",
-          message: "First name "
-        },
-        {
-          name: "lastname",
-          type: "input",
-          message: "Last name "
-        },
-        {
-          name: "role",
-          type: "list",
-          message: "What is their role? ",
-          choices: roles
-        },
-        {
-          name: "manager",
-          type: "list",
-          message: "Who is their Manager? ",
-          choices: managers
-        }
-      ]).then(function (res) {
-        db.query("INSERT INTO employee SET ?", {
-          first_name: res.firstname,
-          last_name: res.lastname,
-          role_id: res.role,
-          manager_id: res.manager
-        }, function (err) {
-          if (err) throw err
-          console.table(res.firstname, "added as a new Employee")
-          initPrompt()
-        })
-
-      })
-    })
-  })
-};
-
-//function to update employee in the database
-function updateEmployeeRole() {
-
-  db.query(`SELECT * FROM employee`, (err, data) => {
-    if (err) throw err;
-
-    const employees = data.map(({
-      id,
-      first_name,
-      last_name
-    }) => ({
-      name: first_name + " " + last_name,
-      value: id
-    }));
-    //inquirer prompt that presents a list of employees to choose from
-    inquirer.prompt([{
-        type: 'list',
-        name: 'name',
-        message: "Select an Employee to Update their Role",
-        choices: employees
-      }])
-      .then(event => {
-        const employee = event.name;
-        //creating an array to put the results in order to query the updated results
-        const updateArray = [];
-        updateArray.push(employee);
-
-        db.query(`SELECT * FROM role`, (err, data) => {
-          if (err) throw err;
-
-          const roles = data.map(({
-            id,
-            title
-          }) => ({
-            name: title,
-            value: id
-          }));
-          //inquirer prompt that presents a list of roles to choose from 
-          inquirer.prompt([{
-              type: 'list',
-              name: 'role',
-              message: "Select a new Role?",
-              choices: roles
-            }])
-            .then(event => {
-              const role = event.role;
-              updateArray.push(role);
-
-              //need to swap array to get role_id value first
-              let employee = updateArray[0]
-              updateArray[0] = role
-              updateArray[1] = employee
-
-
-              db.query(`UPDATE employee SET role_id = ? WHERE id = ?`, updateArray, (err, result) => {
-                if (err) throw err;
-                console.log("Employee Updated, View all Employees to see update");
-
-                initPrompt();
-              });
-            });
-        });
-      });
-  });
-};
-//function to change the employee manager. if they select themselves they no longer have a manager(self)
-function updateEmployeeManager(){
-  db.query(`SELECT * FROM employee`, (err, data) => {
-    if (err) throw err;
-
-    const employees = data.map(({
-      id,
-      first_name,
-      last_name
-    }) => ({
-      name: first_name + " " + last_name,
-      value: id
-    }));
-    //inquirer prompt that presents a list of employees to choose from
-    inquirer.prompt([
+    const { manager } = await inquirer.prompt([
       {
-        type: 'list',
-        name: 'employee',
-        message: "Select an Employee to change their Manager",
+        type: "list",
+        name: "manager",
+        message: chalk.yellow("Select A Manager:"),
+        choices: managers
+      }
+    ]);
+
+    const spinner = ora("Fetching employees for selected manager...").start();
+    const results = await db.query(
+      "SELECT CONCAT(first_name, ' ', last_name) AS Employees FROM employee WHERE manager_id = ?",
+      [manager]
+    );
+    spinner.succeed("Employees loaded:");
+    if (results.length === 0) {
+      console.log(chalk.red("This manager has no employees."));
+    } else {
+      console.table(results);
+    }
+  } catch (err) {
+    console.error(chalk.red("Error fetching employees by manager:"), err);
+  } finally {
+    initPrompt();
+  }
+}
+
+// View department budget (sum of salaries for each department)
+async function viewDepartmentBudget() {
+  try {
+    const spinner = ora("Calculating department budgets...").start();
+    const results = await db.query(`
+      SELECT department_id AS ID,
+             department.name AS Department,
+             SUM(salary) AS Budget
+      FROM role
+      INNER JOIN department ON role.department_id = department.id
+      GROUP BY role.department_id;
+    `);
+    spinner.succeed("Department budgets calculated:");
+    console.table(results);
+  } catch (err) {
+    console.error(chalk.red("Error fetching department budgets:"), err);
+  } finally {
+    initPrompt();
+  }
+}
+
+// =========================
+//      ADD FUNCTIONS
+// =========================
+
+// Add a new department
+async function addDepartment() {
+  try {
+    const { name } = await inquirer.prompt([
+      {
+        type: "input",
+        name: "name",
+        message: chalk.yellow("Name of new department:")
+      }
+    ]);
+    const spinner = ora("Adding department...").start();
+    await db.query("INSERT INTO department SET ?", { name });
+    spinner.succeed(`Department "${name}" added successfully.`);
+  } catch (err) {
+    console.error(chalk.red("Error adding department:"), err);
+  } finally {
+    initPrompt();
+  }
+}
+
+// Add a new role
+async function addRole() {
+  try {
+    const departmentsData = await db.query("SELECT * FROM department");
+    const departments = departmentsData.map(({ id, name }) => ({ name, value: id }));
+    const { name: roleName, salary, department } = await inquirer.prompt([
+      {
+        type: "input",
+        name: "name",
+        message: chalk.yellow("Name of new role:")
+      },
+      {
+        type: "input",
+        name: "salary",
+        message: chalk.yellow("Salary of the role:")
+      },
+      {
+        type: "list",
+        name: "department",
+        message: chalk.yellow("Department to assign new role:"),
+        choices: departments
+      }
+    ]);
+    const spinner = ora("Adding role...").start();
+    await db.query("INSERT INTO role SET ?", {
+      title: roleName,
+      salary,
+      department_id: department
+    });
+    spinner.succeed(`Role "${roleName}" added successfully.`);
+  } catch (err) {
+    console.error(chalk.red("Error adding role:"), err);
+  } finally {
+    initPrompt();
+  }
+}
+
+// Add a new employee
+async function addEmployee() {
+  try {
+    const rolesData = await db.query("SELECT * FROM role");
+    const roles = rolesData.map(({ id, title }) => ({ name: title, value: id }));
+
+    // Get employees with no manager to list as potential managers
+    const managersData = await db.query("SELECT * FROM employee WHERE manager_id IS NULL");
+    const managers = managersData.map(({ id, first_name, last_name }) => ({
+      name: `${first_name} ${last_name}`,
+      value: id
+    }));
+
+    managers.push({name:"None", value:null})
+    const { firstname, lastname, role, manager } = await inquirer.prompt([
+      {
+        type: "input",
+        name: "firstname",
+        message: chalk.yellow("Enter employee's first name:")
+      },
+      {
+        type: "input",
+        name: "lastname",
+        message: chalk.yellow("Enter employee's last name:")
+      },
+      {
+        type: "list",
+        name: "role",
+        message: chalk.yellow("Select employee's role:"),
+        choices: roles
+      },
+      {
+        type: "list",
+        name: "manager",
+        message: chalk.yellow("Select employee's manager:"),
+        choices: managers
+      }
+    ]);
+
+    const spinner = ora("Adding employee...").start();
+    await db.query("INSERT INTO employee SET ?", {
+      first_name: firstname,
+      last_name: lastname,
+      role_id: role,
+      manager_id: manager
+    });
+    spinner.succeed(`Employee "${firstname} ${lastname}" added successfully.`);
+  } catch (err) {
+    console.error(chalk.red("Error adding employee:"), err);
+  } finally {
+    initPrompt();
+  }
+}
+
+// =========================
+//     UPDATE FUNCTIONS
+// =========================
+
+// Update an employee's role
+async function updateEmployeeRole() {
+  try {
+    const employeesData = await db.query("SELECT * FROM employee");
+    const employees = employeesData.map(({ id, first_name, last_name }) => ({
+      name: `${first_name} ${last_name}`,
+      value: id
+    }));
+
+    const { employee } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "employee",
+        message: chalk.yellow("Select an employee to update their role:"),
+        choices: employees
+      }
+    ]);
+
+    const rolesData = await db.query("SELECT * FROM role");
+    const roles = rolesData.map(({ id, title }) => ({ name: title, value: id }));
+
+    const { role } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "role",
+        message: chalk.yellow("Select the new role:"),
+        choices: roles
+      }
+    ]);
+
+    const spinner = ora("Updating employee role...").start();
+    await db.query("UPDATE employee SET role_id = ? WHERE id = ?", [role, employee]);
+    spinner.succeed("Employee role updated successfully.");
+  } catch (err) {
+    console.error(chalk.red("Error updating employee role:"), err);
+  } finally {
+    initPrompt();
+  }
+}
+
+// Update an employee's manager
+async function updateEmployeeManager() {
+  try {
+    const employeesData = await db.query("SELECT * FROM employee");
+    const employees = employeesData.map(({ id, first_name, last_name }) => ({
+      name: `${first_name} ${last_name}`,
+      value: id
+    }));
+    employees.push({name:"None", value:null})
+
+    const { employee, manager } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "employee",
+        message: chalk.yellow("Select an employee to update their manager:"),
         choices: employees
       },
       {
-        type: 'list',
-        name: 'manager',
-        message: "Select a new Manager",
+        type: "list",
+        name: "manager",
+        message: chalk.yellow("Select the new manager:"),
         choices: employees
-      }]).then(event =>{
-       if(event.manager===event.employee){
-        db.query(`UPDATE employee SET manager_id = NULL WHERE id = ${event.employee}`, (err, result) => {
-          if (err) throw err;
-          console.log("New Manager Updated");
-          initPrompt();
-        })} else {
-          db.query(`UPDATE employee SET manager_id = ${event.manager} WHERE id = ${event.employee}`, (err, result) => {
-            if (err) throw err;
-            console.log("New Manager Updated");
-            initPrompt();
-        })};
-      })
-})};
+      }
+    ]);
 
-//function giving prompts that calls desired delete function
-function deleteFunction() {
-  inquirer.prompt([{
-    type: "list",
-    message: "Make a Selection:",
-    name: "choice",
-    choices: [
-      "Delete Employee",
-      "Delete Role",
-      "Delete Department"
-    ]
-  }]).then(function (event) {
-    switch (event.choice) {
-      case "Delete Department":
-        deleteDepartment();
+    const spinner = ora("Updating employee manager...").start();
+    // If the employee selects themselves, set manager_id to NULL
+    if (employee === manager) {
+      await db.query("UPDATE employee SET manager_id = NULL WHERE id = ?", [employee]);
+      spinner.succeed("Employee's manager set to none.");
+    } else {
+      await db.query("UPDATE employee SET manager_id = ? WHERE id = ?", [manager, employee]);
+      spinner.succeed("Employee manager updated successfully.");
+    }
+  } catch (err) {
+    console.error(chalk.red("Error updating employee manager:"), err);
+  } finally {
+    initPrompt();
+  }
+}
+
+// =========================
+//      DELETE FUNCTIONS
+// =========================
+
+// Delete Function – select which delete action to take
+async function deleteFunction() {
+  try {
+    const { choice } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "choice",
+        message: chalk.yellow("Select delete option:"),
+        choices: ["Delete Employee", "Delete Role", "Delete Department"]
+      }
+    ]);
+
+    switch (choice) {
+      case "Delete Employee":
+        await deleteEmployee();
         break;
       case "Delete Role":
-        deleteRole();
+        await deleteRole();
         break;
-      case "Delete Employee":
-        deleteEmployee();
+      case "Delete Department":
+        await deleteDepartment();
         break;
-
     }
-  })
-};
+  } catch (err) {
+    console.error(chalk.red("Error in delete function:"), err);
+  }
+}
 
-
-//function to delete an employee
-function deleteEmployee() {
-  db.query(`SELECT * FROM employee`, (err, data) => {
-    if (err) throw err;
-
-    const employees = data.map(({
-      id,
-      first_name,
-      last_name
-    }) => ({
-      name: first_name + " " + last_name,
+// Delete an employee
+async function deleteEmployee() {
+  try {
+    const employeesData = await db.query("SELECT * FROM employee");
+    const employees = employeesData.map(({ id, first_name, last_name }) => ({
+      name: `${first_name} ${last_name}`,
       value: id
     }));
-    //inquirer prompt that presents a list of employees to choose from
-    inquirer.prompt([{
-        type: 'list',
-        name: 'name',
-        message: "Select an Employee to remove from the database",
+
+    const { employee } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "employee",
+        message: chalk.yellow("Select an employee to delete:"),
         choices: employees
-      }])
-      .then(event => {
-        db.query(`DELETE FROM employee WHERE employee.id = ${event.name} `, (err, result) => {
-          if (err) throw err;
-          console.log("Employee has been removed from the database.");
+      }
+    ]);
 
-          initPrompt();
-        });
-      });
-  });
-};
+    const spinner = ora("Deleting employee...").start();
+    await db.query("DELETE FROM employee WHERE id = ?", [employee]);
+    spinner.succeed("Employee deleted successfully.");
+  } catch (err) {
+    console.error(chalk.red("Error deleting employee:"), err);
+  } finally {
+    initPrompt();
+  }
+}
 
-//function to delete a role
-function deleteRole() {
-  db.query(`SELECT * FROM role`, (err, data) => {
-    if (err) throw err;
+// Delete a role
+async function deleteRole() {
+  try {
+    const rolesData = await db.query("SELECT * FROM role");
+    const roles = rolesData.map(({ id, title }) => ({ name: title, value: id }));
 
-    const roles = data.map(({
-      id,
-      title
-    }) => ({
-      name: title,
-      value: id
-    }));
-    //inquirer prompt that presents a list of roles to choose from
-    inquirer.prompt([{
-        type: 'list',
-        name: 'name',
-        message: "Select a Role to remove",
+    const { role } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "role",
+        message: chalk.yellow("Select a role to delete:"),
         choices: roles
-      }])
-      .then(event => {
-        db.query(`DELETE FROM role WHERE role.id = ${event.name} `, (err, result) => {
-          if (err) throw err;
-          console.log("Role has been removed from the database.");
+      }
+    ]);
 
-          initPrompt();
-        });
-      });
-  });
-};
+    const spinner = ora("Deleting role...").start();
+    await db.query("DELETE FROM role WHERE id = ?", [role]);
+    spinner.succeed("Role deleted successfully.");
+  } catch (err) {
+    console.error(chalk.red("Error deleting role:"), err);
+  } finally {
+    initPrompt();
+  }
+}
 
-//function to delete a department
-function deleteDepartment() {
-  db.query(`SELECT * FROM department`, (err, data) => {
-    if (err) throw err;
+// Delete a department
+async function deleteDepartment() {
+  try {
+    const departmentsData = await db.query("SELECT * FROM department");
+    const departments = departmentsData.map(({ id, name }) => ({ name, value: id }));
 
-    const departments = data.map(({
-      id,
-      name
-    }) => ({
-      name: name,
-      value: id
-    }));
-    //inquirer prompt that presents a list of department to choose from
-    inquirer.prompt([{
-        type: 'list',
-        name: 'name',
-        message: "Select a Department to remove",
+    const { department } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "department",
+        message: chalk.yellow("Select a department to delete:"),
         choices: departments
-      }])
-      .then(event => {
-        db.query(`DELETE FROM department WHERE department.id = ${event.name} `, (err, result) => {
-          if (err) throw err;
-          console.log("Department has been removed from the database.");
+      }
+    ]);
 
-          initPrompt();
-        });
-      });
-  });
-};
+    const spinner = ora("Deleting department...").start();
+    await db.query("DELETE FROM department WHERE id = ?", [department]);
+    spinner.succeed("Department deleted successfully.");
+  } catch (err) {
+    console.error(chalk.red("Error deleting department:"), err);
+  } finally {
+    initPrompt();
+  }
+}
 
+// Start the CLI
 initPrompt();
